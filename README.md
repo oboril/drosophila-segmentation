@@ -21,7 +21,7 @@ The images are automatically rescaled to 1x1x1 um voxels - I think this is good 
 ## Visualization
 The 3D stacks can be visualized using 3D Viewer in ImageJ, but I personally prefer UCSF Chimera.
 
-## Notes
+## Troubleshooting
 The program is not very sophisticated, and will likely produce some errors. This section will hopefully show how to solve the common ones.
 
 ### Most runtime errors
