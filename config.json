@@ -1,5 +1,5 @@
 {
-  "input-image": "../images/st10B-3.tif",
+  "input-image": "../images/st10B-1.tif",
   "output-folder": "results",
 
   "nuclei": {

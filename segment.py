@@ -151,8 +151,8 @@ x = np.arange(segmented.shape[0])
 y = np.arange(segmented.shape[1])
 z = np.arange(segmented.shape[2])
 x,y,z = np.meshgrid(x,y,z, indexing="ij")
-for nucleus in range(1,num_areas+1):
-  mask_i = (segmented==nucleus)
+for cell in range(1,len(volumes)+1):
+  mask_i = (segmented==cell)
   volume_i = np.count_nonzero(mask_i)
   x_i = np.sum(np.where(mask_i, x, 0))//volume_i
   y_i = np.sum(np.where(mask_i, y, 0))//volume_i
