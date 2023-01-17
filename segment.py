@@ -31,7 +31,7 @@ MIN_CYTOPLASM_GAP = config["cytoplasm"]["nucleus-cell-gap"]["min"]
 CYTOSKELET_CLOSING_ITERS = config["cytoplasm"]["closing-iters"]
 CYTOSKELET_CLOSING_RADIUS = config["cytoplasm"]["closing-radius"]
 
-SAVE_PATH = "results"
+SAVE_PATH = config["output-folder"]
 
 start = time()
 
