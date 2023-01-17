@@ -113,7 +113,7 @@ with open(SAVE_PATH + "/nuclei.csv", "w+") as f:
   for idx,(v, (x,y,z)) in enumerate(zip(volumes, centres)):
     f.write("{},{},{},{},{}\n".format(idx+1, x, y, z, v))
 
-utils.tf.imwrite(SAVE_PATH + "/segmented_nuclei.tif", np.where(ordered_segmented.transpose([2,0,1]) > 0, 255, 0).astype(np.uint8))
+utils.tf.imwrite(SAVE_PATH + "/segmented_nuclei.tif", np.where(ordered_segmented.transpose([2,1,0]) > 0, 255, 0).astype(np.uint8))
 
 print(f"NUCLEI SEGMENTED (elapsed {time()-start:0.0f} s)")
 
