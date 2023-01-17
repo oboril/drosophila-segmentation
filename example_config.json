@@ -1,0 +1,25 @@
+{
+  "input-image": "../images/st10B-1.tif",
+  "output-folder": "results",
+
+  "nuclei": {
+    "center": {
+      "blur": 5,
+      "threshold": 0.3,
+      "min-radius": 7
+    },
+    "threshold": 0.1,
+    "closing-radius": 2,
+    "max-count": 16
+  },
+
+  "cytoplasm" : {
+    "z-equalization-coef": 8,
+    "nucleus-cell-gap": {
+      "min" : 5,
+      "max" : 50
+    },
+    "closing-iters": 10,
+    "closing-radius": 3
+  }
+}
