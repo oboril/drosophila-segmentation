@@ -47,6 +47,8 @@ img = utils.resize_1um(img, scale)
 nuclei = img[:,:,:,1]
 cytoskelet = img[:,:,:,0]
 
+utils.tf.imwrite(SAVE_PATH + "/resized_nuclei_raw.tif", (nuclei.transpose([2,1,0])*255/np.max(nuclei)).astype(np.uint8))
+
 print("Finding centers of nuclei")
 blurred = gaussian(nuclei, NUCLEI_CENTER_BLUR)
 
@@ -56,6 +58,8 @@ mask = blurred > threshold
 dist = distance_transform_edt(mask)
 
 mask = np.where(dist > NUCLEI_CENTER_MIN_RADIUS, 1, 0)
+
+mask = dilation(mask, ball(3))
 
 labelled, num_areas = label(mask)
 
@@ -108,10 +112,11 @@ for new_idx, old_idx in enumerate(indeces):
 
 print("Saving segmented nuclei")
 
-with open(SAVE_PATH + "/nuclei.csv", "w+") as f:
-  f.write("{},{},{},{},{}\n".format("N", "x", "y", "z", "Volume"))
-  for idx,(v, (x,y,z)) in enumerate(zip(volumes, centres)):
-    f.write("{},{},{},{},{}\n".format(idx+1, x, y, z, v))
+#with open(SAVE_PATH + "/nuclei.csv", "w+") as f:
+#  f.write("{},{},{},{},{}\n".format("N", "x", "y", "z", "Volume"))
+#  for idx,(v, (x,y,z)) in enumerate(zip(volumes, centres)):
+#    f.write("{},{},{},{},{}\n".format(idx+1, x, y, z, v))
+
 
 utils.tf.imwrite(SAVE_PATH + "/segmented_nuclei.tif", np.where(ordered_segmented.transpose([2,1,0]) > 0, 255, 0).astype(np.uint8))
 
@@ -140,7 +145,7 @@ cytoskelet = gaussian(cytoskelet, 1)
 cytoskelet = (cytoskelet*255/np.max(cytoskelet)).astype(np.uint8)
 
 print("Saving preprocessed cytoskelet channel")
-utils.tf.imwrite(SAVE_PATH + "/preprocessed_cytoskelet.tif", cytoskelet)
+utils.tf.imwrite(SAVE_PATH + "/preprocessed_cytoskelet.tif", cytoskelet.transpose([2,1,0]))
 
 print("Segmenting cytoplasm")
 segmented = watershed(cytoskelet, seed_points)
@@ -169,7 +174,7 @@ with open(SAVE_PATH + "/summary.csv", "w+") as f:
 
 for idx in range(1,len(volumes)+1):
   cell = (segmented == idx).astype(np.uint8)*255
-  utils.tf.imwrite(SAVE_PATH+f"/segmented_cell_{idx:0>2}.tif", cell)
+  utils.tf.imwrite(SAVE_PATH+f"/segmented_cell_{idx:0>2}.tif", cell.transpose([2,1,0]))
 
 print("DONE!")
 print(f"Elapsed: {time()-start:0.0f}s")
