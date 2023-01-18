@@ -8,8 +8,8 @@
       "threshold": 0.3,
       "min-radius": 7
     },
-    "threshold": 0.07,
-    "closing-radius": 4,
+    "threshold": 0.1,
+    "closing-radius": 2,
     "max-count": 16
   },
 

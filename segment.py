@@ -40,6 +40,7 @@ if not os.path.exists(SAVE_PATH):
 
 print(f"Loading image {PATH}")
 img, scale = utils.load_image(PATH)
+print("Detected scale:", scale)
 
 print("Resizing image to 1um/voxel")
 img = utils.resize_1um(img, scale)
