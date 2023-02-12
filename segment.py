@@ -34,6 +34,9 @@ if not os.path.exists(config.output_folder):
 nuclei = img[:,:,:,1]
 cytoskelet = img[:,:,:,0]
 
+print("Saving resized nuclei")
+utils.tf.imwrite(config.output_folder + "/nuclei.tif", nuclei.transpose([2,1,0]).astype(np.uint8))
+
 print("Finding centers of nuclei")
 blurred = gaussian(nuclei, config.nuclei.center.blur)
 
@@ -88,8 +91,6 @@ for nucleus in range(1,num_areas+1):
 
 indeces = range(1, len(volumes)+1)
 
-print(bb_volume_frac)
-
 bb_volume_frac, volumes, centres, indeces = zip(*sorted(zip(bb_volume_frac, volumes, centres, indeces), reverse=True))
 
 if len(volumes) > config.nuclei.max_count:
@@ -119,32 +120,36 @@ utils.tf.imwrite(config.output_folder + "/segmented_nuclei.tif", np.where(ordere
 
 print(f"NUCLEI SEGMENTED (elapsed {time()-start:0.0f} s)")
 
-exit(0)
-
 print("Equalizing cytoskelet channel along z axis")
 cytoskelet = cytoskelet.astype(float)/np.max(img)
-equalized = utils.equalize_depth_intensity(cytoskelet, CYTOSKELET_EQUALIZATION_COEF)
+cytoskelet = utils.equalize_depth_intensity(cytoskelet, config.cytoplasm.z_equalization_coef)
 
 print("Preparing seeds for cytoplasm segmentation")
-seed_points = dilation(ordered_segmented, ball(MIN_CYTOPLASM_GAP))
+seed_points = dilation(ordered_segmented, ball(config.cytoplasm.nucleus_cell_gap.min))
 
 not_outside = ordered_segmented > 0
 
-not_outside = binary_dilation(not_outside, iterations = MAX_CYTOPLASM_GAP)
+not_outside = binary_dilation(not_outside, iterations = config.cytoplasm.nucleus_cell_gap.max)
 
 outside_idx = len(volumes)+1
 seed_points = np.where(not_outside, seed_points, outside_idx)
+seed_points[:,:,0] = outside_idx
+seed_points[:,:,-1] = outside_idx
+seed_points[:,0,:] = outside_idx
+seed_points[:,-1,:] = outside_idx
+seed_points[0,:,:] = outside_idx
+seed_points[-1,:,:] = outside_idx
 
 print("Preprocessing cytoskelet channel")
 cytoskelet = gaussian(cytoskelet, 1)
 cytoskelet = (cytoskelet*255/np.max(cytoskelet)).astype(np.uint8)
-for _ in range(CYTOSKELET_CLOSING_ITERS):
-  cytoskelet = closing(cytoskelet, ball(CYTOSKELET_CLOSING_RADIUS))
+for _ in range(config.cytoplasm.closing_iters):
+  cytoskelet = closing(cytoskelet, ball(config.cytoplasm.closing_radius))
 cytoskelet = gaussian(cytoskelet, 1)
 cytoskelet = (cytoskelet*255/np.max(cytoskelet)).astype(np.uint8)
 
-print("Saving preprocessed cytoskelet channel")
-utils.tf.imwrite(SAVE_PATH + "/preprocessed_cytoskelet.tif", cytoskelet.transpose([2,1,0]))
+print("Saving processed cytoskelet")
+utils.tf.imwrite(config.output_folder + "/cytoskelet.tif", cytoskelet.transpose([2,1,0]).astype(np.uint8))
 
 print("Segmenting cytoplasm")
 segmented = watershed(cytoskelet, seed_points)
@@ -166,14 +171,14 @@ for cell in range(1,len(volumes)+1):
 
 print("Saving all results")
 
-with open(SAVE_PATH + "/summary.csv", "w+") as f:
+with open(config.output_folder + "/summary.csv", "w+") as f:
   f.write("{},{},{},{},{},{},{},{},{}\n".format("N", "x nuc", "y nuc", "z nuc", "volume", "x cyt", "y cyt", "z cyt", "volume cyt"))
   for idx,(v, (x,y,z), cv, (cx,cy,cz)) in enumerate(zip(volumes, centres, cyt_volumes, cyt_centres)):
     f.write("{},{},{},{},{},{},{},{},{}\n".format(idx+1, x, y, z, v, cx,cy,cz,cv))
 
 for idx in range(1,len(volumes)+1):
   cell = (segmented == idx).astype(np.uint8)*255
-  utils.tf.imwrite(SAVE_PATH+f"/segmented_cell_{idx:0>2}.tif", cell.transpose([2,1,0]))
+  utils.tf.imwrite(config.output_folder+f"/segmented_cell_{idx:0>2}.tif", cell.transpose([2,1,0]))
 
 print("DONE!")
 print(f"Elapsed: {time()-start:0.0f}s")

@@ -50,9 +50,6 @@ def save_image(path, image, axes="XYZC", resolution=None, metadata={}):
   else:
     tf.imwrite(path,image,imagej=True, resolutionunit="MICROMETER", metadata=metadata)
 
-#def resize_1um(img, scale):
-#  return resize(img, [*(np.array(img.shape)[:-1]*scale).astype(int),img.shape[-1]])
-
 def equalize_depth_intensity(img, coef, sigma=3):
   blurred = gaussian(img, (sigma, sigma, 0))
   blurred_sum = np.cumsum(blurred, 2)

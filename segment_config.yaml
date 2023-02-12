@@ -21,9 +21,9 @@ nuclei:
   max_count: 15
 # Options for segmentation of cytoplasm
 cytoplasm:
-  z_equalization_coef: 8
+  z_equalization_coef: 15 # smaller value amplifies bottom of the image more
   nucleus_cell_gap:
     min: 5
     max: 50
-  closing_iters: 10
+  closing_iters: 3
   closing_radius: 3
