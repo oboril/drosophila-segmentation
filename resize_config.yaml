@@ -1,0 +1,11 @@
+input_file: "../images/st10B-1.tif"
+output_file: "./results/resized_image.tif"
+input_resolution: # voxel size in microns of the input image
+  x: 0.41432038
+  y: 0.41432038
+  z: 1.0
+output_resolution: # target voxel size in microns
+  x: 1.0
+  y: 1.0
+  z: 1.0
+interpolation_order: 3 # order of interpolating polynomial, e.g. 3 corresponds to cubic interpolation
