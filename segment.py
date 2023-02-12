@@ -5,62 +5,46 @@ from time import time
 import json
 
 import utils
+import resize
 
 import numpy as np
 from skimage.filters import gaussian
-from scipy.ndimage import label, distance_transform_edt, binary_dilation
+from scipy.ndimage import label, distance_transform_edt, binary_dilation, find_objects
 from skimage.morphology import closing, ball, dilation
 from skimage.segmentation import watershed
 
 print("Loading config")
+config = utils.load_yaml("segment_config.yaml")
 
-config = json.load(open("config.json", "r"))
-
-PATH = config["input-image"]
-NUCLEI_CENTER_BLUR = config["nuclei"]["center"]["blur"]
-NUCLEI_CENTER_THRESHOLD = config["nuclei"]["center"]["threshold"]
-NUCLEI_CENTER_MIN_RADIUS = config["nuclei"]["center"]["min-radius"]
-
-NUCLEI_THRESHOLD = config["nuclei"]["threshold"]
-NUCLEI_CLOSING_RADIUS = config["nuclei"]["closing-radius"]
-MAX_NUCLEI = config["nuclei"]["max-count"]
-
-CYTOSKELET_EQUALIZATION_COEF = config["cytoplasm"]["z-equalization-coef"]
-MAX_CYTOPLASM_GAP = config["cytoplasm"]["nucleus-cell-gap"]["max"]
-MIN_CYTOPLASM_GAP = config["cytoplasm"]["nucleus-cell-gap"]["min"]
-CYTOSKELET_CLOSING_ITERS = config["cytoplasm"]["closing-iters"]
-CYTOSKELET_CLOSING_RADIUS = config["cytoplasm"]["closing-radius"]
-
-SAVE_PATH = config["output-folder"]
+print("Loading image", config.input_file)
+if config.resizing.resize:
+  print("Resizing image")
+  inp_res = config.resizing.input_resolution
+  inp_res = [inp_res.x, inp_res.y, inp_res.z]
+  img, metadata = resize.resize_complete(config.input_file, inp_res, [1., 1., 1.], config.resizing.interpolation_order)
+else:
+  img, scale, metadata = utils.load_image(config.input_file, dtype=float)
+  print("Image was not resized, the resolution in .tif metadata is", scale) 
 
 start = time()
 
-if not os.path.exists(SAVE_PATH):
-  os.makedirs(SAVE_PATH)
-
-print(f"Loading image {PATH}")
-img, scale = utils.load_image(PATH)
-print("Detected scale:", scale)
-
-print("Resizing image to 1um/voxel")
-img = utils.resize_1um(img, scale)
+if not os.path.exists(config.output_folder):
+  os.makedirs(config.output_folder)
 
 nuclei = img[:,:,:,1]
 cytoskelet = img[:,:,:,0]
 
-utils.tf.imwrite(SAVE_PATH + "/resized_nuclei_raw.tif", (nuclei.transpose([2,1,0])*255/np.max(nuclei)).astype(np.uint8))
-
 print("Finding centers of nuclei")
-blurred = gaussian(nuclei, NUCLEI_CENTER_BLUR)
+blurred = gaussian(nuclei, config.nuclei.center.blur)
 
-threshold = np.min(blurred)*(1-NUCLEI_CENTER_THRESHOLD) + np.max(blurred)*NUCLEI_CENTER_THRESHOLD
+threshold = np.min(blurred)*(1-config.nuclei.center.threshold) + np.max(blurred)*config.nuclei.center.threshold
 mask = blurred > threshold
 
 dist = distance_transform_edt(mask)
 
-mask = np.where(dist > NUCLEI_CENTER_MIN_RADIUS, 1, 0)
+mask = np.where(dist > config.nuclei.center.min_radius, 1, 0)
 
-mask = dilation(mask, ball(3))
+mask = dilation(mask, ball(config.nuclei.center.dilation))
 
 labelled, num_areas = label(mask)
 
@@ -68,9 +52,9 @@ print(f"Found {num_areas} nuclei")
 
 print("Preparing nuclei for segmentation")
 nuclei = (nuclei*255/np.max(nuclei)).astype(np.uint8)
-nuclei = closing(nuclei, ball(NUCLEI_CLOSING_RADIUS))
+nuclei = closing(nuclei, ball(config.nuclei.closing_radius))
 
-threshold = np.min(nuclei)*(1-NUCLEI_THRESHOLD) + np.max(nuclei)*NUCLEI_THRESHOLD
+threshold = np.min(nuclei)*(1-config.nuclei.threshold) + np.max(nuclei)*config.nuclei.threshold
 mask = nuclei > threshold
 
 dist = distance_transform_edt(mask)
@@ -79,8 +63,10 @@ print("Segmenting nuclei")
 segmented = watershed(-dist, labelled, mask=mask)
 
 print("Processing segmented nuclei")
+bounding_boxes = find_objects(segmented)
 volumes = []
 centres = []
+bb_volume_frac = []
 x = np.arange(segmented.shape[0])
 y = np.arange(segmented.shape[1])
 z = np.arange(segmented.shape[2])
@@ -94,19 +80,29 @@ for nucleus in range(1,num_areas+1):
   volumes.append(volume_i)
   centres.append((x_i,y_i,z_i))
 
+  bb = bounding_boxes[nucleus-1]
+  dx = int(bb[0].stop - bb[0].start)
+  dy = int(bb[1].stop - bb[1].start)
+  dz = int(bb[2].stop - bb[2].start)
+  bb_volume_frac.append(volume_i/(dx*dy*dz))
+
 indeces = range(1, len(volumes)+1)
 
-volumes, centres, indeces = zip(*sorted(zip(volumes, centres, indeces), reverse=True))
+print(bb_volume_frac)
 
-if len(volumes) > MAX_NUCLEI:
-  print(f"Limiting the nuclei to {MAX_NUCLEI} largest out of {len(volumes)}")
-  volumes = volumes[:MAX_NUCLEI]
-  centres = centres[:MAX_NUCLEI]
-  indeces = indeces[:MAX_NUCLEI]
+bb_volume_frac, volumes, centres, indeces = zip(*sorted(zip(bb_volume_frac, volumes, centres, indeces), reverse=True))
+
+if len(volumes) > config.nuclei.max_count:
+  print(f"Limiting the nuclei to {config.nuclei.max_count} largest out of {len(volumes)}")
+  bb_volume_frac = bb_volume_frac[:config.nuclei.max_count]
+  volumes = volumes[:config.nuclei.max_count]
+  centres = centres[:config.nuclei.max_count]
+  indeces = indeces[:config.nuclei.max_count]
 
 ordered_segmented = np.zeros(segmented.shape, dtype=np.uint8)
 
 print("Sorting nuclei by volume")
+volumes, centres, indeces = zip(*sorted(zip(volumes, centres, indeces), reverse=True))
 for new_idx, old_idx in enumerate(indeces):
   new_idx += 1
   ordered_segmented = np.where(segmented == old_idx, new_idx, ordered_segmented)
@@ -119,9 +115,11 @@ print("Saving segmented nuclei")
 #    f.write("{},{},{},{},{}\n".format(idx+1, x, y, z, v))
 
 
-utils.tf.imwrite(SAVE_PATH + "/segmented_nuclei.tif", np.where(ordered_segmented.transpose([2,1,0]) > 0, 255, 0).astype(np.uint8))
+utils.tf.imwrite(config.output_folder + "/segmented_nuclei.tif", np.where(ordered_segmented.transpose([2,1,0]) > 0, 255, 0).astype(np.uint8))
 
 print(f"NUCLEI SEGMENTED (elapsed {time()-start:0.0f} s)")
+
+exit(0)
 
 print("Equalizing cytoskelet channel along z axis")
 cytoskelet = cytoskelet.astype(float)/np.max(img)

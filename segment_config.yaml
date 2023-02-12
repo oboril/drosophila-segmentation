@@ -1,0 +1,29 @@
+# Input and output path
+input_file: "../images/st10B-1.tif"
+output_folder: "./results"
+# Options for resizing image
+resizing:
+  resize: True
+  interpolation_order: 1 # order of interpolating polynomial, e.g. 3 corresponds to cubic interpolation
+  input_resolution: # voxel size in microns of the input image
+    x: 0.41432038
+    y: 0.41432038
+    z: 1.0
+# Options for segmentation of nuclei
+nuclei:
+  center:
+    blur: 5
+    threshold: 0.3
+    min_radius: 7
+    dilation: 3
+  threshold: 0.1
+  closing_radius: 2
+  max_count: 15
+# Options for segmentation of cytoplasm
+cytoplasm:
+  z_equalization_coef: 8
+  nucleus_cell_gap:
+    min: 5
+    max: 50
+  closing_iters: 10
+  closing_radius: 3

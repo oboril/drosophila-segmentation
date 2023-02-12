@@ -1,3 +1,5 @@
+# To resize 3D image with any number of channels, update this file and run `python resize.py`
+# Might not work on images with timepoints (e.g. TZCXY)
 input_file: "../images/st10B-1.tif"
 output_file: "./results/resized_image.tif"
 input_resolution: # voxel size in microns of the input image
