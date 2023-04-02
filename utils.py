@@ -53,7 +53,7 @@ def save_image(path, image, axes="XYZC", resolution=None, metadata={}):
 def equalize_depth_intensity(img, coef, sigma=3):
   blurred = gaussian(img, (sigma, sigma, 0))
   blurred_sum = np.cumsum(blurred, 2)
-  fact = np.exp(blurred_sum/coef)
+  fact = np.exp2(blurred_sum/coef)
   return img * fact
 
 def load_yaml(path):
