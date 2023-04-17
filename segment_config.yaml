@@ -1,5 +1,5 @@
 # Input and output path
-input_file: "../images/st10B-1.tif"
+input_file: "../images/st10B-2.tif"
 output_folder: "./results"
 # Options for resizing image
 resizing:
@@ -24,6 +24,6 @@ cytoplasm:
   z_equalization_coef: 15 # smaller value amplifies bottom of the image more
   nucleus_cell_gap:
     min: 5
-    max: 50
+    max: 80
   closing_iters: 3
   closing_radius: 3

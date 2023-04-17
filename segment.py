@@ -131,6 +131,8 @@ not_outside = ordered_segmented > 0
 
 not_outside = binary_dilation(not_outside, iterations = config.cytoplasm.nucleus_cell_gap.max)
 
+seed_points = np.where(seed_points != 0, 1, 0) ## TEMPORARY
+
 outside_idx = len(volumes)+1
 seed_points = np.where(not_outside, seed_points, outside_idx)
 seed_points[:,:,0] = outside_idx
@@ -139,6 +141,8 @@ seed_points[:,0,:] = outside_idx
 seed_points[:,-1,:] = outside_idx
 seed_points[0,:,:] = outside_idx
 seed_points[-1,:,:] = outside_idx
+
+# utils.tf.imwrite(config.output_folder + "/cyt_seeds.tif", np.where(seed_points == outside_idx, 0, 255).astype(np.uint8).transpose([2,1,0]))
 
 print("Preprocessing cytoskelet channel")
 cytoskelet = gaussian(cytoskelet, 1)
